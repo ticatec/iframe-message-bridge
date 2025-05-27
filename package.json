@@ -1,0 +1,34 @@
+{
+  "name": "@ticatec/iframe-message-bridge",
+  "version": "0.0.1",
+  "description": "A lightweight library for reliable communication between parent window and multiple iframes using postMessage, supporting both one-way and request-response messaging.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "clean": "rm -rf ./dist",
+    "build": "npm run clean && tsc && cp ./package.json ./dist/",
+    "publish:public": "npm run build && cp *.md ./dist && cd ./dist && npm publish --access public"
+  },
+  "keywords": [
+    "iframe",
+    "postMessage",
+    "messaging",
+    "communication",
+    "parent",
+    "bridge",
+    "typescript"
+  ],
+  "repository": {
+    "type": "https",
+    "url": "https://github.com/ticatec/iframe-message-bridge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ticatec/iframe-message-bridge/issues"
+  },
+  "homepage": "https://github.com/ticatec/iframe-message-bridge",
+  "author": "Henry Feng",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

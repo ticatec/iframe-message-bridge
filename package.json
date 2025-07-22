@@ -1,6 +1,6 @@
 {
   "name": "@ticatec/iframe-message-bridge",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A lightweight library for reliable communication between parent window and multiple iframes using postMessage, supporting both one-way and request-response messaging.",
   "main": "index.js",
   "types": "index.d.ts",

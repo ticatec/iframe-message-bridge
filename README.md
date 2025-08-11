@@ -1,5 +1,10 @@
 # iframe-message-bridge
 
+[![Version](https://img.shields.io/npm/v/@ticatec/iframe-message-bridge)](https://www.npmjs.com/package/@ticatec/iframe-message-bridge)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+[中文](./README_CN.md) ｜ English
+
 A lightweight TypeScript library that implements structured, reliable communication between parent pages and multiple iframes based on `postMessage`, supporting one-way messages, request-response patterns, and broadcast messages with automatic message tracking and origin validation.
 
 ---
@@ -74,6 +79,17 @@ const bridge = new MessageBridgeClient('https://your-parent-domain.com');
 // Send request and wait for response
 bridge.emit('getUserInfo', { id: 123 }).then(response => {
   console.log('Received response from parent page:', response);
+}).catch(error => {
+  console.error('Request failed or timeout:', error);
+});
+
+// Send request with custom timeout (10 seconds)
+bridge.emit('slowOperation', { data: 'large' }, 10000).then(response => {
+  console.log('Received response:', response);
+}).catch(error => {
+  if (error.message.includes('timeout')) {
+    console.error('Request timed out after 10 seconds');
+  }
 });
 
 // Send one-way message (no response needed)
@@ -95,6 +111,13 @@ bridge.offBroadcast('theme-change');
 
 // Clear all broadcast listeners
 bridge.clearBroadcastHandlers();
+
+// Clean up when component unmounts (important for memory management)
+useEffect(() => {
+  return () => {
+    bridge.destroy(); // Remove all listeners and clear resources
+  };
+}, []);
 ```
 
 ---
@@ -123,6 +146,26 @@ Send broadcast message to all iframes in the page. Automatically scans and retri
 - `data`: Data to send
 - `targetOrigin`: Target origin, defaults to `'*'`
 
+#### `.off(eventName: string)`
+
+Unregister a specific request-response event handler.
+
+#### `.offBroadcast(eventName: string)`
+
+Unregister a specific broadcast message handler.
+
+#### `.clearHandlers()`
+
+Clear all request-response event handlers.
+
+#### `.clearBroadcastHandlers()`
+
+Clear all broadcast message handlers.
+
+#### `.destroy()`
+
+Destroy the manager instance, remove global message listener and clear all handlers.
+
 ---
 
 ### `MessageBridgeClient` (iframe Page)
@@ -131,9 +174,13 @@ Send broadcast message to all iframes in the page. Automatically scans and retri
 
 Create client instance, specifying the parent page's origin (e.g., `'https://example.com'`)
 
-#### `.emit(eventName: string, data?: any): Promise<any>`
+#### `.emit(eventName: string, data?: any, timeout?: number): Promise<any>`
 
 Send a request-type message and wait for parent page response.
+
+- `eventName`: Event name
+- `data`: Data to send (optional)
+- `timeout`: Timeout in milliseconds, defaults to 30000ms (30 seconds)
 
 #### `.send(eventName: string, data?: any): void`
 
@@ -150,6 +197,14 @@ Unregister specific broadcast message handler.
 #### `.clearBroadcastHandlers()`
 
 Clear all broadcast message handlers.
+
+#### `.clearPendingRequests()`
+
+Clear all pending requests and reject their promises to prevent memory leaks.
+
+#### `.destroy()`
+
+Destroy the client instance, remove global message listener, clear all pending requests and broadcast handlers.
 
 ---
 

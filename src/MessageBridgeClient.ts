@@ -5,14 +5,16 @@ import { BroadcastMessage } from "./BroadcastMessage";
 type BroadcastHandler = (data: any) => void;
 
 export class MessageBridgeClient {
-    private targetOrigin: string;
-    private pending = new Map<string, { resolve: Function; reject: Function }>();
+    private readonly targetOrigin: string;
+    private pending = new Map<string, { resolve: Function; reject: Function; timeoutId?: number }>();
     private broadcastHandlers = new Map<string, BroadcastHandler>();
     private requestId = 0;
+    private readonly boundHandleMessage: (event: MessageEvent) => void;
 
     constructor(targetOrigin: string) {
         this.targetOrigin = targetOrigin;
-        window.addEventListener('message', this.handleMessage.bind(this));
+        this.boundHandleMessage = this.handleMessage.bind(this);
+        window.addEventListener('message', this.boundHandleMessage);
     }
 
     private handleMessage(event: MessageEvent) {
@@ -44,7 +46,7 @@ export class MessageBridgeClient {
     }
 
     // 发送请求并等待响应
-    public emit(eventName: string, data?: any): Promise<any> {
+    public emit(eventName: string, data?: any, timeout: number = 30000): Promise<any> {
         const requestId = `req_${Date.now()}_${++this.requestId}`;
         const message: RequestMessage = {
             __bridge__: true,
@@ -54,8 +56,27 @@ export class MessageBridgeClient {
             data,
         };
         window.parent.postMessage(message, this.targetOrigin);
+        
         return new Promise((resolve, reject) => {
-            this.pending.set(requestId, { resolve, reject });
+            // 设置超时处理
+            const timeoutId = setTimeout(() => {
+                if (this.pending.has(requestId)) {
+                    this.pending.delete(requestId);
+                    reject(new Error(`Request timeout after ${timeout}ms for event: ${eventName}`));
+                }
+            }, timeout);
+            
+            this.pending.set(requestId, { 
+                timeoutId,
+                resolve: (result: any) => {
+                    clearTimeout(timeoutId);
+                    resolve(result);
+                }, 
+                reject: (error: any) => {
+                    clearTimeout(timeoutId);
+                    reject(error);
+                }
+            });
         });
     }
 
@@ -85,5 +106,23 @@ export class MessageBridgeClient {
     // 清空所有广播消息处理器
     public clearBroadcastHandlers() {
         this.broadcastHandlers.clear();
+    }
+
+    // 清空所有待处理的请求（拒绝所有等待中的Promise）
+    public clearPendingRequests() {
+        this.pending.forEach(({ reject, timeoutId }) => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+            reject(new Error('Request cancelled - client destroyed'));
+        });
+        this.pending.clear();
+    }
+
+    // 销毁实例，移除全局监听器并清理所有资源
+    public destroy() {
+        window.removeEventListener('message', this.boundHandleMessage);
+        this.clearPendingRequests();
+        this.clearBroadcastHandlers();
     }
 }

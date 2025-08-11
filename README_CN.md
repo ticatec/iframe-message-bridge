@@ -1,5 +1,12 @@
 # iframe-message-bridge
 
+
+[![Version](https://img.shields.io/npm/v/@ticatec/iframe-message-bridge)](https://www.npmjs.com/package/@ticatec/iframe-message-bridge)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+中文 ｜ [English](./README.md)
+
+
 一个轻量级的 TypeScript 库，基于 `postMessage` 实现父页面与多个 iframe 之间的结构化、可靠通信，支持单向消息、请求-响应模式和广播消息，自动追踪消息并校验来源。
 
 ---
@@ -74,6 +81,17 @@ const bridge = new MessageBridgeClient('https://your-parent-domain.com');
 // 发起请求并等待响应
 bridge.emit('getUserInfo', { id: 123 }).then(response => {
   console.log('收到来自父页面的响应:', response);
+}).catch(error => {
+  console.error('请求失败或超时:', error);
+});
+
+// 发起请求并设置自定义超时时间（10秒）
+bridge.emit('slowOperation', { data: 'large' }, 10000).then(response => {
+  console.log('收到响应:', response);
+}).catch(error => {
+  if (error.message.includes('timeout')) {
+    console.error('请求在10秒后超时');
+  }
 });
 
 // 发送单向消息（不需要响应）
@@ -95,6 +113,13 @@ bridge.offBroadcast('theme-change');
 
 // 清空所有广播监听器
 bridge.clearBroadcastHandlers();
+
+// 组件卸载时清理资源（内存管理很重要）
+useEffect(() => {
+  return () => {
+    bridge.destroy(); // 移除所有监听器并清理资源
+  };
+}, []);
 ```
 
 ---
@@ -123,6 +148,26 @@ bridge.clearBroadcastHandlers();
 - `data`: 要发送的数据
 - `targetOrigin`: 目标域名，默认为 `'*'`
 
+#### `.off(eventName: string)`
+
+注销特定的请求-响应事件处理器。
+
+#### `.offBroadcast(eventName: string)`
+
+注销特定的广播消息处理器。
+
+#### `.clearHandlers()`
+
+清空所有请求-响应事件处理器。
+
+#### `.clearBroadcastHandlers()`
+
+清空所有广播消息处理器。
+
+#### `.destroy()`
+
+销毁管理器实例，移除全局消息监听器并清空所有处理器。
+
 ---
 
 ### `MessageBridgeClient`（iframe 页面）
@@ -131,9 +176,13 @@ bridge.clearBroadcastHandlers();
 
 创建客户端实例，指定父页面的 origin（例如 `'https://example.com'`）
 
-#### `.emit(eventName: string, data?: any): Promise<any>`
+#### `.emit(eventName: string, data?: any, timeout?: number): Promise<any>`
 
 发送一个请求类型的消息，并等待父页面响应。
+
+- `eventName`: 事件名称
+- `data`: 要发送的数据（可选）
+- `timeout`: 超时时间（毫秒），默认为30000ms（30秒）
 
 #### `.send(eventName: string, data?: any): void`
 
@@ -150,6 +199,14 @@ bridge.clearBroadcastHandlers();
 #### `.clearBroadcastHandlers()`
 
 清空所有广播消息处理器。
+
+#### `.clearPendingRequests()`
+
+清空所有待处理的请求并拒绝其 Promise 以防止内存泄漏。
+
+#### `.destroy()`
+
+销毁客户端实例，移除全局消息监听器，清空所有待处理请求和广播处理器。
 
 ---
 

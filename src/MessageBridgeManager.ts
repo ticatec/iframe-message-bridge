@@ -8,9 +8,11 @@ type BroadcastHandler = (data: any) => void;
 export class MessageBridgeManager {
     private handlers = new Map<string, EventHandler>();
     private broadcastHandlers = new Map<string, BroadcastHandler>();
+    private readonly boundHandleMessage: (event: MessageEvent) => void;
 
     constructor() {
-        window.addEventListener('message', this.handleMessage.bind(this));
+        this.boundHandleMessage = this.handleMessage.bind(this);
+        window.addEventListener('message', this.boundHandleMessage);
     }
 
     private async handleMessage(event: MessageEvent) {
@@ -71,6 +73,33 @@ export class MessageBridgeManager {
     // 注册广播消息处理器
     public onBroadcast(eventName: string, handler: BroadcastHandler) {
         this.broadcastHandlers.set(eventName, handler);
+    }
+
+    // 注销请求-响应处理器
+    public off(eventName: string) {
+        this.handlers.delete(eventName);
+    }
+
+    // 注销广播消息处理器
+    public offBroadcast(eventName: string) {
+        this.broadcastHandlers.delete(eventName);
+    }
+
+    // 清空所有请求-响应处理器
+    public clearHandlers() {
+        this.handlers.clear();
+    }
+
+    // 清空所有广播消息处理器
+    public clearBroadcastHandlers() {
+        this.broadcastHandlers.clear();
+    }
+
+    // 销毁实例，移除全局监听器
+    public destroy() {
+        window.removeEventListener('message', this.boundHandleMessage);
+        this.handlers.clear();
+        this.broadcastHandlers.clear();
     }
 
     // 自动获取所有iframe窗口

@@ -2,8 +2,8 @@ import {RequestMessage} from "./RequestMessage";
 import {ResponseMessage} from "./ResponseMessage";
 import {BroadcastMessage} from "./BroadcastMessage";
 
-type EventHandler = (data: any, sourceWindow: Window, sourceOrigin: string) => any;
-type BroadcastHandler = (data: any) => void;
+export type EventHandler = (data: any, sourceWindow: Window, sourceOrigin: string) => any;
+export type BroadcastHandler = (data: any) => void;
 
 export class MessageBridgeManager {
     private handlers = new Map<string, EventHandler>();
